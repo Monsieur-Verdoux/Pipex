@@ -6,7 +6,7 @@
 /*   By: akovalev <akovalev@student.hive.fi>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/02/05 17:29:21 by akovalev          #+#    #+#             */
-/*   Updated: 2024/02/06 13:29:57 by akovalev         ###   ########.fr       */
+/*   Updated: 2024/02/06 13:51:09 by akovalev         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,8 +15,8 @@
 void	free_split(char **arr)
 {
 	int	i;
-
 	i = 0;
+	
 	while (arr[i])
 	{
 		free(arr[i]);
@@ -28,7 +28,7 @@ void	free_split(char **arr)
 void	free_all(t_pipex *p)
 {
 	free_split(p->paths);
-	free_split(p->com_params);
+	//ft_printf("Commands and parameters are now: %s, %s, %s, %s", p->cmd1, p->cmd2, p->cmd1_params, p->cmd2_params);
 	if (p->cmd1 != NULL)
 		free(p->cmd1);
 	if (p->cmd2 != NULL)
@@ -62,7 +62,10 @@ char	*check_command(t_pipex *p, int index)
 
 	p->com_params = ft_split(p->argv[index], ' ');
 	if (p->com_params[1] && p->com_params[2])
+	{
+		free_split(p->com_params);
 		return (NULL);
+	}
 	i = 0;
 	while (p->paths[i])
 	{
