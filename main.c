@@ -6,7 +6,7 @@
 /*   By: akovalev <akovalev@student.hive.fi>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/02/05 17:29:21 by akovalev          #+#    #+#             */
-/*   Updated: 2024/02/05 19:56:23 by akovalev         ###   ########.fr       */
+/*   Updated: 2024/02/06 13:29:57 by akovalev         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,6 +23,20 @@ void	free_split(char **arr)
 		i++;
 	}
 	free(arr);
+}
+
+void	free_all(t_pipex *p)
+{
+	free_split(p->paths);
+	free_split(p->com_params);
+	if (p->cmd1 != NULL)
+		free(p->cmd1);
+	if (p->cmd2 != NULL)
+		free(p->cmd2);
+	if (p->cmd1_params != NULL)
+		free(p->cmd1_params);
+	if (p->cmd2_params != NULL)
+		free(p->cmd2_params);
 }
 
 char	**parse_paths(char **env)
@@ -46,21 +60,31 @@ char	*check_command(t_pipex *p, int index)
 	char	*command;
 	int		i;
 
+	p->com_params = ft_split(p->argv[index], ' ');
+	if (p->com_params[1] && p->com_params[2])
+		return (NULL);
 	i = 0;
 	while (p->paths[i])
 	{
 		com_slash = ft_strjoin(p->paths[i], "/");
-		command = ft_strjoin(com_slash, p->argv[index]);
+		command = ft_strjoin(com_slash, p->com_params[0]);
 		free(com_slash);
 		com_slash = NULL;
 		if (access(command, X_OK) != -1)
 		{
 			ft_printf("Command is now: %s\n", command);
+			if (index == 2 && p->com_params[1])
+				p->cmd1_params = ft_strdup(p->com_params[1]);
+			if (index == 3 && p->com_params[1])
+				p->cmd2_params = ft_strdup(p->com_params[1]);
+			ft_printf("Command params are now: %s, %s\n", p->cmd1_params, p->cmd2_params);
+			free_split(p->com_params);
 			return (command);
 		}
 		i++;
 		free(command);
 	}
+	free_split(p->com_params);
 	return (NULL);
 }
 
@@ -95,14 +119,22 @@ int	validate_arguments(t_pipex *p)
 	}
 	return (1);
 }
+void	initialize_struct(t_pipex *p, int argc, char **argv, char **env)
+{
+	p->argc = argc;
+	p->argv = argv;
+	p->env = env;
+	p->cmd1 = NULL;
+	p->cmd2 = NULL;
+	p->cmd1_params = NULL;
+	p->cmd2_params = NULL;
+}
 
 int	main(int argc, char **argv, char**env)
 {
 	t_pipex	p;
 
-	p.argc = argc;
-	p.argv = argv;
-	p.env = env;
+	initialize_struct(&p, argc, argv, env);
 	if (argc != 5)
 	{
 		ft_printf("There should be 4 arguments\n");
@@ -111,18 +143,10 @@ int	main(int argc, char **argv, char**env)
 	p.paths = parse_paths(env);
 	if (!validate_arguments(&p))
 	{
-		free_split(p.paths);
-		if (p.cmd1 != NULL)
-			free(p.cmd1);
-		if (p.cmd2 != NULL)
-			free(p.cmd2);
+		free_all(&p);
 		return (0);
 	}
-	free_split(p.paths);
-	if (p.cmd1 != NULL)
-		free(p.cmd1);
-	if (p.cmd2 != NULL)
-		free(p.cmd2);
+	free_all(&p);
 	return (1);
 	//exit (EXIT_SUCCESS);
 }
