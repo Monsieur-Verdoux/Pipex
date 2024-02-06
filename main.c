@@ -6,7 +6,7 @@
 /*   By: akovalev <akovalev@student.hive.fi>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/02/05 17:29:21 by akovalev          #+#    #+#             */
-/*   Updated: 2024/02/06 13:51:09 by akovalev         ###   ########.fr       */
+/*   Updated: 2024/02/06 18:33:01 by akovalev         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,7 +16,7 @@ void	free_split(char **arr)
 {
 	int	i;
 	i = 0;
-	
+
 	while (arr[i])
 	{
 		free(arr[i]);
@@ -149,7 +149,57 @@ int	main(int argc, char **argv, char**env)
 		free_all(&p);
 		return (0);
 	}
+	if (pipe(p.pipefd) == -1)
+		perror("pipe");
+	p.pid = fork();
+	if (p.pid < 0)
+	{
+		perror("fork");
+		return (0);
+	}
+	if (p.pid == 0)
+	{
+		close(p.pipefd[0]);
+		if (dup2(p.pipefd[1], STDOUT_FILENO) == -1)
+		{
+			perror("dup2");
+			return (0);
+		}
+		close(p.pipefd[1]);
+		close(p.input);
+		execlp("cat", "cat", argv[1], NULL);
+		perror("execlp");
+		exit (EXIT_FAILURE);
+	}
+	else if (p.pid > 0)
+	{
+		wait(NULL);
+		close(p.pipefd[1]);
+		p.output = open(argv[4], O_WRONLY | O_CREAT, 0666);
+		if (p.output == -1)
+			perror("open");
+		if (dup2(p.pipefd[0], STDIN_FILENO) == -1)
+		{
+			perror("dup2");
+			return (0);
+		}
+		close(p.pipefd[0]);
+		if (dup2(p.output, STDOUT_FILENO) == -1)
+		{
+			perror("dup2");
+			return (0);
+		}
+		close(p.output);
+		execlp("cat", "cat", NULL);
+		// if (waitpid(p.pid, NULL, 0) == -1)
+		// {
+		// 	perror("waitpid");
+		// 	exit(EXIT_FAILURE);
+		// }
+	}
 	free_all(&p);
+	//ft_printf("about to exit successfully\n");
 	return (1);
 	//exit (EXIT_SUCCESS);
 }
+
