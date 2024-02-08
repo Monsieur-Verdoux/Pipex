@@ -6,7 +6,7 @@
 /*   By: akovalev <akovalev@student.hive.fi>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/02/05 17:29:21 by akovalev          #+#    #+#             */
-/*   Updated: 2024/02/08 18:10:28 by akovalev         ###   ########.fr       */
+/*   Updated: 2024/02/08 18:45:48 by akovalev         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -126,10 +126,37 @@ void	initialize_struct(t_pipex *p, int argc, char **argv, char **env)
 	p->com_params_2 = NULL;
 	p->paths = NULL;
 }
+void	first_child(t_pipex *p)
+{
+	close(p->pipefd[0]);
+	dup2(p->pipefd[1], STDOUT_FILENO);
+	dup2(p->input, STDIN_FILENO);
+	close(p->pipefd[1]);
+	close(p->input);
+	execve(p->cmd1, p->com_params_1, p->env);
+	perror("execve");
+	//exit (EXIT_FAILURE);
+}
+
+void	second_child(t_pipex *p)
+{
+	close(p->pipefd[1]);
+	p->output = open(p->argv[4], O_WRONLY | O_CREAT | O_TRUNC, 0666);
+	if (p->output == -1)
+		perror("open");
+	dup2(p->pipefd[0], STDIN_FILENO);
+	dup2(p->output, STDOUT_FILENO);
+	close(p->pipefd[0]);
+	close(p->output);
+	execve(p->cmd2, p->com_params_2, p->env);
+	perror("execve");
+	//exit (EXIT_FAILURE);
+}
 
 int	main(int argc, char **argv, char**env)
 {
 	t_pipex	p;
+	int		status;
 
 	if (argc != 5)
 	{
@@ -154,35 +181,28 @@ int	main(int argc, char **argv, char**env)
 		return (0);
 	}
 	if (p.pid == 0)
+		first_child(&p);
+	p.pid2 = fork();
+	if (p.pid2 < 0)
 	{
-		close(p.pipefd[0]);
-		dup2(p.pipefd[1], STDOUT_FILENO);
-		dup2(p.input, STDIN_FILENO);
-		close(p.pipefd[1]);
-		close(p.input);
-		execve(p.cmd1, p.com_params_1, p.env);
-		perror("execve");
-		exit (EXIT_FAILURE);
+		perror("fork");
+		return (0);
 	}
-	else if (p.pid > 0)
+	if (p.pid2 == 0)
+		second_child(&p);
+	close(p.pipefd[0]);
+	close(p.pipefd[1]);
+	if (waitpid(p.pid, &status, 0) == -1)
 	{
-		close(p.pipefd[1]);
-		p.output = open(argv[4], O_WRONLY | O_CREAT | O_TRUNC, 0666);
-		if (p.output == -1)
-			perror("open");
-		dup2(p.pipefd[0], STDIN_FILENO);
-		dup2(p.output, STDOUT_FILENO);
-		close(p.pipefd[0]);
-		close(p.output);
-		execve(p.cmd2, p.com_params_2, p.env);
-		if (waitpid(p.pid, NULL, 0) == -1)
-		{
-			perror("waitpid");
-			exit(EXIT_FAILURE);
-		}
+		perror("waitpid");
+		//exit(EXIT_FAILURE);
+	}
+	if (waitpid(p.pid2, &status, 0) == -1)
+	{
+		perror("waitpid");
+		//exit(EXIT_FAILURE);
 	}
 	free_all(&p);
-	return (1);
-	//exit (EXIT_SUCCESS);
+	return (WEXITSTATUS(status));
 }
 
