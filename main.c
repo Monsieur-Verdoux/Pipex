@@ -6,7 +6,7 @@
 /*   By: akovalev <akovalev@student.hive.fi>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/02/05 17:29:21 by akovalev          #+#    #+#             */
-/*   Updated: 2024/02/08 15:02:37 by akovalev         ###   ########.fr       */
+/*   Updated: 2024/02/08 18:10:28 by akovalev         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,6 +15,7 @@
 void	free_split(char **arr)
 {
 	int	i;
+
 	i = 0;
 
 	while (arr[i])
@@ -27,16 +28,16 @@ void	free_split(char **arr)
 
 void	free_all(t_pipex *p)
 {
-	free_split(p->paths);
-	//ft_printf("Commands and parameters are now: %s, %s, %s, %s", p->cmd1, p->cmd2, p->cmd1_params, p->cmd2_params);
+	if (p->paths != NULL)
+		free_split(p->paths);
 	if (p->cmd1 != NULL)
 		free(p->cmd1);
 	if (p->cmd2 != NULL)
 		free(p->cmd2);
-	// if (p->cmd1_params != NULL)
-	// 	free(p->cmd1_params);
-	// if (p->cmd2_params != NULL)
-	// 	free(p->cmd2_params);
+	if (p->com_params_1 != NULL)
+		free_split(p->com_params_1);
+	if (p->com_params_2 != NULL)
+		free_split(p->com_params_2);
 }
 
 char	**parse_paths(char **env)
@@ -44,6 +45,7 @@ char	**parse_paths(char **env)
 	int		i;
 	char	**paths;
 
+	paths = NULL;
 	i = 0;
 	while (env[i])
 	{
@@ -76,16 +78,10 @@ char	*check_command(t_pipex *p, int index)
 		free(com_slash);
 		com_slash = NULL;
 		if (access(command, X_OK) != -1)
-		{
-			ft_printf("Command is now: %s\n", command);
-			//ft_printf("Command params are now: %s, %s\n", p->cmd1_params, p->cmd2_params);
-			//free_split(p->com_params);
 			return (command);
-		}
 		i++;
 		free(command);
 	}
-	//free_split(p->com_params);
 	return (NULL);
 }
 
@@ -94,13 +90,13 @@ int	validate_arguments(t_pipex *p)
 	p->cmd1 = check_command(p, 2);
 	if (!p->cmd1)
 	{
-		ft_printf("Invalid command #1\n");
+		perror("pipex");
 		return (0);
 	}
 	p->cmd2 = check_command(p, 3);
 	if (!p->cmd2)
 	{
-		ft_printf("Invalid command #2\n");
+		perror("pipex");
 		return (0);
 	}
 	p->input = open(p->argv[1], O_RDONLY);
@@ -111,10 +107,9 @@ int	validate_arguments(t_pipex *p)
 	}
 	if (access(p->argv[4], F_OK) != -1)
 	{
-		ft_printf("Output file exists\n");
 		if (access(p->argv[4], W_OK) != 0)
 		{
-			ft_printf("Output file exists but does not have write permissions\n");
+			perror("");
 			return (0);
 		}
 	}
@@ -127,21 +122,24 @@ void	initialize_struct(t_pipex *p, int argc, char **argv, char **env)
 	p->env = env;
 	p->cmd1 = NULL;
 	p->cmd2 = NULL;
-	// p->cmd1_params = NULL;
-	// p->cmd2_params = NULL;
+	p->com_params_1 = NULL;
+	p->com_params_2 = NULL;
+	p->paths = NULL;
 }
 
 int	main(int argc, char **argv, char**env)
 {
 	t_pipex	p;
 
-	initialize_struct(&p, argc, argv, env);
 	if (argc != 5)
 	{
 		ft_printf("There should be 4 arguments\n");
 		exit (EXIT_FAILURE);
 	}
+	initialize_struct(&p, argc, argv, env);
 	p.paths = parse_paths(env);
+	if (p.paths == NULL)
+		exit(EXIT_FAILURE);
 	if (!validate_arguments(&p))
 	{
 		free_all(&p);
@@ -158,48 +156,32 @@ int	main(int argc, char **argv, char**env)
 	if (p.pid == 0)
 	{
 		close(p.pipefd[0]);
-		if (dup2(p.pipefd[1], STDOUT_FILENO) == -1 || dup2(p.input, STDIN_FILENO) == -1)
-		{
-			perror("dup2");
-			return (0);
-		}
+		dup2(p.pipefd[1], STDOUT_FILENO);
+		dup2(p.input, STDIN_FILENO);
 		close(p.pipefd[1]);
 		close(p.input);
-		//ft_printf("command 1: %s, command 2: %s\n", p.cmd1, p.cmd2);
 		execve(p.cmd1, p.com_params_1, p.env);
-		//execlp("cat", "cat", argv[1], NULL);
-		perror("execlp");
+		perror("execve");
 		exit (EXIT_FAILURE);
 	}
 	else if (p.pid > 0)
 	{
-		wait(NULL);
 		close(p.pipefd[1]);
 		p.output = open(argv[4], O_WRONLY | O_CREAT | O_TRUNC, 0666);
 		if (p.output == -1)
 			perror("open");
-		if (dup2(p.pipefd[0], STDIN_FILENO) == -1)
-		{
-			perror("dup2");
-			return (0);
-		}
+		dup2(p.pipefd[0], STDIN_FILENO);
+		dup2(p.output, STDOUT_FILENO);
 		close(p.pipefd[0]);
-		if (dup2(p.output, STDOUT_FILENO) == -1)
-		{
-			perror("dup2");
-			return (0);
-		}
 		close(p.output);
-		//execlp("cat", "cat", NULL);
 		execve(p.cmd2, p.com_params_2, p.env);
-		// if (waitpid(p.pid, NULL, 0) == -1)
-		// {
-		// 	perror("waitpid");
-		// 	exit(EXIT_FAILURE);
-		// }
+		if (waitpid(p.pid, NULL, 0) == -1)
+		{
+			perror("waitpid");
+			exit(EXIT_FAILURE);
+		}
 	}
 	free_all(&p);
-	//ft_printf("about to exit successfully\n");
 	return (1);
 	//exit (EXIT_SUCCESS);
 }
