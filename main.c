@@ -6,7 +6,7 @@
 /*   By: akovalev <akovalev@student.hive.fi>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/02/05 17:29:21 by akovalev          #+#    #+#             */
-/*   Updated: 2024/02/06 18:33:01 by akovalev         ###   ########.fr       */
+/*   Updated: 2024/02/08 15:02:37 by akovalev         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -33,10 +33,10 @@ void	free_all(t_pipex *p)
 		free(p->cmd1);
 	if (p->cmd2 != NULL)
 		free(p->cmd2);
-	if (p->cmd1_params != NULL)
-		free(p->cmd1_params);
-	if (p->cmd2_params != NULL)
-		free(p->cmd2_params);
+	// if (p->cmd1_params != NULL)
+	// 	free(p->cmd1_params);
+	// if (p->cmd2_params != NULL)
+	// 	free(p->cmd2_params);
 }
 
 char	**parse_paths(char **env)
@@ -60,34 +60,32 @@ char	*check_command(t_pipex *p, int index)
 	char	*command;
 	int		i;
 
-	p->com_params = ft_split(p->argv[index], ' ');
-	if (p->com_params[1] && p->com_params[2])
-	{
-		free_split(p->com_params);
-		return (NULL);
-	}
+	if (index == 2)
+		p->com_params_1 = ft_split(p->argv[index], ' ');
+	else if (index == 3)
+		p->com_params_2 = ft_split(p->argv[index], ' ');
+
 	i = 0;
 	while (p->paths[i])
 	{
 		com_slash = ft_strjoin(p->paths[i], "/");
-		command = ft_strjoin(com_slash, p->com_params[0]);
+		if (index == 2)
+			command = ft_strjoin(com_slash, p->com_params_1[0]);
+		else if (index == 3)
+			command = ft_strjoin(com_slash, p->com_params_2[0]);
 		free(com_slash);
 		com_slash = NULL;
 		if (access(command, X_OK) != -1)
 		{
 			ft_printf("Command is now: %s\n", command);
-			if (index == 2 && p->com_params[1])
-				p->cmd1_params = ft_strdup(p->com_params[1]);
-			if (index == 3 && p->com_params[1])
-				p->cmd2_params = ft_strdup(p->com_params[1]);
-			ft_printf("Command params are now: %s, %s\n", p->cmd1_params, p->cmd2_params);
-			free_split(p->com_params);
+			//ft_printf("Command params are now: %s, %s\n", p->cmd1_params, p->cmd2_params);
+			//free_split(p->com_params);
 			return (command);
 		}
 		i++;
 		free(command);
 	}
-	free_split(p->com_params);
+	//free_split(p->com_params);
 	return (NULL);
 }
 
@@ -129,8 +127,8 @@ void	initialize_struct(t_pipex *p, int argc, char **argv, char **env)
 	p->env = env;
 	p->cmd1 = NULL;
 	p->cmd2 = NULL;
-	p->cmd1_params = NULL;
-	p->cmd2_params = NULL;
+	// p->cmd1_params = NULL;
+	// p->cmd2_params = NULL;
 }
 
 int	main(int argc, char **argv, char**env)
@@ -160,14 +158,16 @@ int	main(int argc, char **argv, char**env)
 	if (p.pid == 0)
 	{
 		close(p.pipefd[0]);
-		if (dup2(p.pipefd[1], STDOUT_FILENO) == -1)
+		if (dup2(p.pipefd[1], STDOUT_FILENO) == -1 || dup2(p.input, STDIN_FILENO) == -1)
 		{
 			perror("dup2");
 			return (0);
 		}
 		close(p.pipefd[1]);
 		close(p.input);
-		execlp("cat", "cat", argv[1], NULL);
+		//ft_printf("command 1: %s, command 2: %s\n", p.cmd1, p.cmd2);
+		execve(p.cmd1, p.com_params_1, p.env);
+		//execlp("cat", "cat", argv[1], NULL);
 		perror("execlp");
 		exit (EXIT_FAILURE);
 	}
@@ -175,7 +175,7 @@ int	main(int argc, char **argv, char**env)
 	{
 		wait(NULL);
 		close(p.pipefd[1]);
-		p.output = open(argv[4], O_WRONLY | O_CREAT, 0666);
+		p.output = open(argv[4], O_WRONLY | O_CREAT | O_TRUNC, 0666);
 		if (p.output == -1)
 			perror("open");
 		if (dup2(p.pipefd[0], STDIN_FILENO) == -1)
@@ -190,7 +190,8 @@ int	main(int argc, char **argv, char**env)
 			return (0);
 		}
 		close(p.output);
-		execlp("cat", "cat", NULL);
+		//execlp("cat", "cat", NULL);
+		execve(p.cmd2, p.com_params_2, p.env);
 		// if (waitpid(p.pid, NULL, 0) == -1)
 		// {
 		// 	perror("waitpid");

@@ -6,7 +6,7 @@
 /*   By: akovalev <akovalev@student.hive.fi>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/02/05 17:30:31 by akovalev          #+#    #+#             */
-/*   Updated: 2024/02/06 18:34:04 by akovalev         ###   ########.fr       */
+/*   Updated: 2024/02/08 14:32:57 by akovalev         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -29,12 +29,12 @@ typedef struct s_pipex
 	int		argc;
 	char	*cmd1;
 	char	*cmd2;
-	char	*cmd1_params;
-	char	*cmd2_params;
+
 	char	**argv;
 	char	**env;
 	char	**paths;
-	char	**com_params;
+	char	**com_params_1;
+	char	**com_params_2;
 	int		pipefd[2];
 	pid_t	pid;
 }	t_pipex;
