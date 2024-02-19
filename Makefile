@@ -6,15 +6,19 @@
 #    By: akovalev <akovalev@student.hive.fi>        +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2024/02/05 17:39:09 by akovalev          #+#    #+#              #
-#    Updated: 2024/02/05 17:41:15 by akovalev         ###   ########.fr        #
+#    Updated: 2024/02/19 15:18:00 by akovalev         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
 NAME	:= pipex 
-#CFLAGS	:= -Wextra -Wall -Werror -Wunreachable-code -Ofast 
-SRCS	:= main.c 
+
+CFLAGS	:= -Wextra -Wall -Werror -Wunreachable-code -Ofast 
+
+SRCS	:= main.c \
+			tools.c
 
 OBJS	:= ${SRCS:.c=.o} Libft/libft.a
+
 BONUS_OBJS := ${BONUS_SRCS:.c=.o} Libft/libft.a 
 
 all: $(NAME)

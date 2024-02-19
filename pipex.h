@@ -6,7 +6,7 @@
 /*   By: akovalev <akovalev@student.hive.fi>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/02/05 17:30:31 by akovalev          #+#    #+#             */
-/*   Updated: 2024/02/08 18:25:43 by akovalev         ###   ########.fr       */
+/*   Updated: 2024/02/19 15:15:35 by akovalev         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -39,4 +39,11 @@ typedef struct s_pipex
 	pid_t	pid;
 	pid_t	pid2;
 }	t_pipex;
+
+void	free_split(char **arr);
+void	free_all(t_pipex *p);
+char	**parse_paths(char **env);
+char	*check_command(t_pipex *p, int index);
+void	initialize_struct(t_pipex *p, int argc, char **argv, char **env);
+
 #endif

@@ -6,94 +6,11 @@
 /*   By: akovalev <akovalev@student.hive.fi>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/02/05 17:29:21 by akovalev          #+#    #+#             */
-/*   Updated: 2024/02/09 17:00:42 by akovalev         ###   ########.fr       */
+/*   Updated: 2024/02/19 15:15:37 by akovalev         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "pipex.h"
-
-void	free_split(char **arr)
-{
-	int	i;
-
-	i = 0;
-	while (arr[i])
-	{
-		free(arr[i]);
-		i++;
-	}
-	free(arr);
-}
-
-void	free_all(t_pipex *p)
-{
-	if (p->paths != NULL)
-		free_split(p->paths);
-	if (p->cmd1 != NULL)
-		free(p->cmd1);
-	if (p->cmd2 != NULL)
-		free(p->cmd2);
-	if (p->com_params_1 != NULL)
-		free_split(p->com_params_1);
-	if (p->com_params_2 != NULL)
-		free_split(p->com_params_2);
-}
-
-char	**parse_paths(char **env)
-{
-	int		i;
-	char	**paths;
-
-	paths = NULL;
-	i = 0;
-	while (env[i])
-	{
-		if (ft_strnstr(env[i], "PATH=", 5))
-			paths = ft_split(env[i] + 5, ':');
-		i++;
-	}
-	return (paths);
-}
-
-char	*check_command(t_pipex *p, int index)
-{
-	char	*com_slash;
-	char	*command;
-	int		i;
-
-	if (index == 2)
-		p->com_params_1 = ft_split(p->argv[index], ' ');
-	else if (index == 3)
-		p->com_params_2 = ft_split(p->argv[index], ' ');
-	i = 0;
-	while (p->paths[i])
-	{
-		com_slash = ft_strjoin(p->paths[i], "/");
-		if (index == 2)
-			command = ft_strjoin(com_slash, p->com_params_1[0]);
-		else if (index == 3)
-			command = ft_strjoin(com_slash, p->com_params_2[0]);
-		free(com_slash);
-		com_slash = NULL;
-		if (access(command, X_OK) != -1)
-			return (command);
-		i++;
-		free(command);
-	}
-	return (NULL);
-}
-
-void	initialize_struct(t_pipex *p, int argc, char **argv, char **env)
-{
-	p->argc = argc;
-	p->argv = argv;
-	p->env = env;
-	p->cmd1 = NULL;
-	p->cmd2 = NULL;
-	p->com_params_1 = NULL;
-	p->com_params_2 = NULL;
-	p->paths = NULL;
-}
 
 void	first_child(t_pipex *p)
 {
@@ -108,7 +25,9 @@ void	first_child(t_pipex *p)
 	p->cmd1 = check_command(p, 2);
 	if (!p->cmd1)
 	{
-		perror("pipex");
+		ft_putstr_fd("Command not found: ", 2);
+		ft_putstr_fd(p->argv[2], 2);
+		ft_putchar_fd('\n', 2);
 		free_all(p);
 		exit (EXIT_FAILURE);
 	}
@@ -135,7 +54,9 @@ void	second_child(t_pipex *p)
 	p->cmd2 = check_command(p, 3);
 	if (!p->cmd2)
 	{
-		perror("pipex");
+		ft_putstr_fd("Command not found: ", 2);
+		ft_putstr_fd(p->argv[3], 2);
+		ft_putchar_fd('\n', 2);
 		free_all(p);
 		exit (EXIT_FAILURE);
 	}
@@ -153,19 +74,24 @@ void	initial_checks(t_pipex *p, int argc, char **argv, char **env)
 {
 	if (argc != 5)
 	{
-		ft_printf("Please provide exactly four arguments\n");
+		ft_putstr_fd("Please provide exactly four arguments\n", 2);
 		exit (EXIT_FAILURE);
+	}
+	if (!argv[1][0] || !argv[4][0])
+	{
+		ft_putstr_fd("no such file or directory:\n", 2);
+		exit(EXIT_FAILURE);
+	}
+	if (!argv[2][0] || !argv[3][0])
+	{
+		ft_putstr_fd("command not found:\n", 2);
+		exit(EXIT_FAILURE);
 	}
 	initialize_struct(p, argc, argv, env);
 	p->paths = parse_paths(env);
 	if (p->paths == NULL)
 	{
 		perror("path");
-		exit(EXIT_FAILURE);
-	}
-	if (pipe(p->pipefd) == -1)
-	{
-		perror("pipe");
 		exit(EXIT_FAILURE);
 	}
 }
@@ -197,18 +123,21 @@ int	main(int argc, char **argv, char**env)
 	int		status;
 
 	initial_checks(&p, argc, argv, env);
+	if (pipe(p.pipefd) == -1)
+	{
+		perror("pipe");
+		exit(EXIT_FAILURE);
+	}
 	forking (&p);
 	close(p.pipefd[0]);
 	close(p.pipefd[1]);
 	if (waitpid(p.pid, &status, 0) == -1)
 	{
-		perror("waitpid");
 		free_all(&p);
 		exit(EXIT_FAILURE);
 	}
 	if (waitpid(p.pid2, &status, 0) == -1)
 	{
-		perror("waitpid");
 		free_all(&p);
 		exit(EXIT_FAILURE);
 	}
