@@ -6,7 +6,7 @@
 /*   By: akovalev <akovalev@student.hive.fi>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/02/05 17:29:21 by akovalev          #+#    #+#             */
-/*   Updated: 2024/02/19 15:15:37 by akovalev         ###   ########.fr       */
+/*   Updated: 2024/02/20 13:40:16 by akovalev         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -126,6 +126,7 @@ int	main(int argc, char **argv, char**env)
 	if (pipe(p.pipefd) == -1)
 	{
 		perror("pipe");
+		free_all(&p);
 		exit(EXIT_FAILURE);
 	}
 	forking (&p);
@@ -142,5 +143,5 @@ int	main(int argc, char **argv, char**env)
 		exit(EXIT_FAILURE);
 	}
 	free_all(&p);
-	return (WEXITSTATUS(status));
+	exit (WEXITSTATUS(status));
 }
